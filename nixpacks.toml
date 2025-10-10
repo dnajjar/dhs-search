@@ -1,4 +1,4 @@
 # nixpacks.toml
 
 [start]
-cmd = "gunicorn scrape-sitemap:app"
+cmd = "gunicorn main:app"
