@@ -1,3 +1,3 @@
 Flask>=2.0.0,<3.0.0
 requests>=2.25.0,<3.0.0
-gunicorn scrape-sitemap:app
+gunicorn>=20.0.0,<22.0.0
