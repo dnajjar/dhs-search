@@ -3,27 +3,37 @@
 <head>
   <title>Site and Date Selector</title>
   <style>
+    .intro-text {
+      font-size: 1rem; /* Slightly larger font size for readability */
+      line-height: 1.8; /* Increase line height for better spacing */
+      color: #333; /* Use a dark text color for readability */
+      text-align: left; /* Align the text to the left for readability */
+      width: 100%; /* Make the text container span the full width of the page */
+      padding: 25px; /* Add padding inside the bar */
+      background-color: #f8f9fa; /* Use a light neutral background color */
+      border: 1px solid #ddd; /* Add a subtle border for definition */
+      border-radius: 8px; /* Add rounded corners for a modern look */
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Add a soft shadow for depth */
+      margin-bottom: 20px; /* Add spacing below the intro text */
+      box-sizing: border-box; /* Ensure padding is included in height calculation */
+    }
+
     body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
-      margin: 0;
-      padding: 20px;
-      font-family: Arial, sans-serif;
-      box-sizing: border-box;
+      margin: 0; /* Remove default margin */
+      padding: 0; /* Remove default padding */
+      font-family: Arial, sans-serif; /* Set a clean font */
+      box-sizing: border-box; /* Ensure consistent sizing */
     }
 
     #form-container {
-      width: 100%;
-      max-width: 600px;
-      margin-bottom: 20px;
-      text-align: left;
+      width: 90%; /* Make the form container responsive */
+      max-width: 1200px; /* Limit the maximum width */
+      margin: 20px auto; /* Center the form container */
     }
 
     .checkbox-group {
-      margin-bottom: 20px;
+      margin-top: 20px; /* Add spacing above the checkboxes */
+      margin-bottom: 20px; /* Add spacing below the checkboxes */
     }
 
     .checkbox-group label {
@@ -231,10 +241,16 @@
   </style>
 </head>
 <body>
+  <p class="intro-text"> Everyday, Department of Homeland Security websites are quietly changing, as policies are updated or revoked with little to no notice give to the public.
+    This tool allows reporters to monitor changes to these websites in real time, making edits visible and auditable. 
+    It surfaces URLs from across the department that have recently been updated, making it possible to quickly identify new policies, track revisions, and ensure transparency by holding DHS accountable for its online content.
+
+    Select one or more sites below to view all URLs updated as of a specific date.
+    For example, to see all ICE site URLs updated since July 2025, select "ICE" and enter "07/01/2025" in the "As of Date" field, then click "Submit" to generate the results.
+  </p>
   <div id="form-container">
-    <h3>DHS Sitemap Search</h3>
-    <p> Select one or more sites below, with an optional cut off date for last udpates.<br> 
-      For example, to see all ICE site URLs updated since July 2025, select ICE and enter 07/01/2025 in the As of Date field. </p>
+    <h3>DHS Site Search</h3>
+    <p>Select one or more sites to view a list of all changed pages</p>
     <form id="site-form">
       <div class="checkbox-group">
         <label><input type="checkbox" name="site" value="ice.gov"> ICE</label>
@@ -243,6 +259,7 @@
         <label><input type="checkbox" name="site" value="fletc.gov"> FLETC</label>
         <label><input type="checkbox" name="site" value="tsa.gov"> TSA</label>
         <label><input type="checkbox" name="site" value="uscis.gov"> USCIS</label>
+        <label><input type="checkbox" name="site" value="DHS.gov"> DHS</label>
       </div>
       <div id="date-picker">
         <label for="as-of-date">As of Date (optional):</label>
@@ -261,8 +278,14 @@
   </div>
 
   <div id="results">
-    <div class="results-summary" id="results-summary"></div>
     
+    <div class="results-summary" id="results-summary"></div>
+    <div id="hide-unknown-container" style="display: none; margin-top: 10px;">
+      <label>
+        <input type="checkbox" id="hide-unknown" />
+        Hide results with unknown "Last Modified" date
+      </label>
+    </div>
     <div class="pagination" id="pagination-top">
       <button id="first-page">First</button>
       <button id="prev-page">Previous</button>
@@ -429,32 +452,57 @@
       displayCurrentPage();
       updatePaginationButtons();
     }
+    function sortResultsByDate(data) {
+    // Replace null with "N/A" and sort by "Last Modified" date
+    data.forEach(row => {
+      if (!row.lastmod) {
+        row.lastmod = "N/A";
+      }
+    });
 
-    function displayResults(data) {
-      const resultsDiv = document.getElementById("results");
-      const summaryDiv = document.getElementById("results-summary");
+    data.sort((a, b) => {
+      if (a.lastmod === "N/A") return 1; // Push "N/A" to the end
+      if (b.lastmod === "N/A") return -1;
+      return new Date(b.lastmod) - new Date(a.lastmod); // Sort descending by date
+    });
 
-      // Calculate pagination
-      totalPages = Math.ceil(data.length / itemsPerPage);
-      currentPage = 1;
+    return data;
+  }
+  function displayResults(data) {
+    const resultsDiv = document.getElementById("results");
+    const summaryDiv = document.getElementById("results-summary");
+    const hideUnknownContainer = document.getElementById("hide-unknown-container"); // Define the container
 
-      // Show summary
-      summaryDiv.innerHTML = `
-        <strong>Results Summary:</strong><br>
-        Found ${data.length.toLocaleString()} URLs total<br>
-        Showing ${itemsPerPage} results per page
-      `;
+    currentResults = sortResultsByDate(data);
 
+    // Calculate pagination
+    totalPages = Math.ceil(data.length / itemsPerPage);
+    currentPage = 1;
+
+    // Show summary
+    summaryDiv.innerHTML = `
+      <strong>Results Summary:</strong><br>
+      Found ${data.length.toLocaleString()} URLs total<br>
+      Showing ${itemsPerPage} results per page
+    `;
+    resultsDiv.style.display = "block";
+    hideUnknownContainer.style.display = "block"; // Show the checkbox container
+
+    // Attach the event handler for the checkbox
+    document.getElementById("hide-unknown").addEventListener("change", function () {
       displayCurrentPage();
-      updatePaginationButtons();
-      resultsDiv.style.display = "block";
-    }
+    });
+
+    displayCurrentPage();
+    updatePaginationButtons();
+  }
 
     function displayCurrentPage() {
       const tableBody = document.getElementById("results-body");
       tableBody.innerHTML = "";
 
       if (!currentResults || currentResults.length === 0) return;
+      const hideUnknown = document.getElementById("hide-unknown").checked;
 
       // Calculate start and end indices
       const startIndex = (currentPage - 1) * itemsPerPage;
@@ -463,9 +511,13 @@
 
       // Populate table
       pageData.forEach(row => {
+        if (hideUnknown && row.lastmod === "N/A") {
+          return; // Skip rows with "N/A" if the checkbox is checked
+        }
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${row.site}</td>
+          <td>${row.site || "Unknown"}</td>
           <td><a href="${row.url}" target="_blank" title="${row.url}">${row.url}</a></td>
           <td>${row.lastmod}</td>
         `;
